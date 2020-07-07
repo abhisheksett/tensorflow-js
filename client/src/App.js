@@ -44,6 +44,44 @@ function App() {
 		return denormalisedTensor;
 	};
 
+	const createModel = () => {
+		const model = tf.sequential();
+
+		model.add(
+			tf.layers.dense({
+				units: 1,
+				useBias: true,
+				activation: 'linear',
+				inputDim: 1,
+			}),
+		);
+
+		const optimizer = tf.train.sgd(0.1);
+
+		model.compile({
+			loss: 'meanSquaredError',
+			optimizer,
+		});
+
+		return model;
+	};
+
+	const trainModel = async (model, x, y) => {
+		const { onBatchEnd, onEpochEnd } = tfvis.show.fitCallbacks({ name: 'Training performance' }, [
+			'loss',
+		]);
+
+		return model.fit(x, y, {
+			batchSize: 32,
+			epochs: 20,
+			validationSplit: 0.2,
+			callbacks: {
+				onEpochEnd,
+				// onBatchEnd,
+			},
+		});
+	};
+
 	useEffect(() => {
 		const initiatePlot = async () => {
 			try {
@@ -76,6 +114,22 @@ function App() {
 					// 	normalisedFeature.min,
 					// 	normalisedFeature.max,
 					// ).print();
+
+					const model = createModel();
+					tfvis.show.modelSummary({ name: 'Model summary' }, model);
+
+					const layers = model.getLayer(undefined, 0);
+					tfvis.show.layer({ name: 'Layer 1' }, layers);
+
+					const result = await trainModel(model, trainingFeatureTensor, trainingLabelTensor);
+					const trainingLoss = result.history.loss.pop();
+					console.log(`Training set loss: ${trainingLoss}`);
+					const validationLoss = result.history.val_loss.pop();
+					console.log(`Validation set loss: ${validationLoss}`);
+
+					const lostTensor = model.evaluate(testingFeatureTensor, testingLabelTensor);
+					const loss = await lostTensor.dataSync();
+					console.log(`Testing set loss: ${loss}`);
 				}
 			} catch (e) {
 				console.log(e);
