@@ -2,12 +2,25 @@ import React, { useState, useEffect } from 'react';
 import * as tfvis from '@tensorflow/tfjs-vis';
 import * as tf from '@tensorflow/tfjs';
 import axios from 'axios';
+import PredictionUI from './templates/PredictionUI';
 import './App.css';
+
+const STATUS_TRAINING = 'Training...';
+const STATUS_TRAINED = 'Trained';
 
 function App() {
 	const [points, setPoints] = useState(null);
+	const [trainingFeatureTensor, setTrainingFeatureTensor] = useState(null);
+	const [trainingLabelTensor, setTrainingLabelTensor] = useState(null);
+	const [testingFeatureTensor, setTestingFeatureTensor] = useState(null);
+	const [testingLabelTensor, setTestingLabelTensor] = useState(null);
+	const [dataLoaded, setDataLoaded] = useState(false);
+	const [trainingStatus, setTrainingStatus] = useState('Loading data...');
+	const [testingStatus, setTestingStatus] = useState('Not yet tested');
+	const [globalModel, setGlobalModel] = useState(null);
 
 	useEffect(() => {
+		tfvis.visor().close();
 		const fetchPointsData = async () => {
 			try {
 				const data = await axios.get('http://localhost:5000/linear/points');
@@ -82,6 +95,38 @@ function App() {
 		});
 	};
 
+	const toggleVisor = () => {
+		tfvis.visor().toggle();
+	};
+
+	const test = async () => {
+		const lostTensor = globalModel.evaluate(testingFeatureTensor, testingLabelTensor);
+		const loss = await lostTensor.dataSync();
+		console.log(loss[0]);
+		setTestingStatus(`Testing set loss: ${loss[0].toPrecision(5)}`);
+	};
+
+	const train = async () => {
+		setTrainingStatus(STATUS_TRAINING);
+		toggleVisor();
+		const model = createModel();
+		setGlobalModel(model);
+		tfvis.show.modelSummary({ name: 'Model summary' }, model);
+
+		const layers = model.getLayer(undefined, 0);
+		tfvis.show.layer({ name: 'Layer 1' }, layers);
+
+		const result = await trainModel(model, trainingFeatureTensor, trainingLabelTensor);
+		const trainingLoss = result.history.loss.pop();
+		console.log(`Training set loss: ${trainingLoss}`);
+		const validationLoss = result.history.val_loss.pop();
+		console.log(`Validation set loss: ${validationLoss}, ${typeof validationLoss}`);
+
+		setTrainingStatus(`${STATUS_TRAINED} (unsaved)
+		Loss: ${trainingLoss.toPrecision(5)}
+		Validation loss: ${validationLoss.toPrecision(5)}`);
+	};
+
 	useEffect(() => {
 		const initiatePlot = async () => {
 			try {
@@ -103,33 +148,26 @@ function App() {
 					const normalisedFeature = normalise(featureTensor);
 					const normalisedLabel = normalise(labelTensor);
 
-					const [trainingFeatureTensor, testingFeatureTensor] = tf.split(
+					featureTensor.dispose();
+					labelTensor.dispose();
+
+					const [tempTrainingFeatureTensor, tempTestingFeatureTensor] = tf.split(
 						normalisedFeature.tensor,
 						2,
 					);
 
-					const [trainingLabelTensor, testingLabelTensor] = tf.split(normalisedLabel.tensor, 2);
-					// denormalise(
-					// 	normalisedFeature.tensor,
-					// 	normalisedFeature.min,
-					// 	normalisedFeature.max,
-					// ).print();
+					setTrainingFeatureTensor(tempTrainingFeatureTensor);
+					setTestingFeatureTensor(tempTestingFeatureTensor);
 
-					const model = createModel();
-					tfvis.show.modelSummary({ name: 'Model summary' }, model);
+					const [tempTrainingLabelTensor, tempTestingLabelTensor] = tf.split(
+						normalisedLabel.tensor,
+						2,
+					);
+					setTrainingLabelTensor(tempTrainingLabelTensor);
+					setTestingLabelTensor(tempTestingLabelTensor);
 
-					const layers = model.getLayer(undefined, 0);
-					tfvis.show.layer({ name: 'Layer 1' }, layers);
-
-					const result = await trainModel(model, trainingFeatureTensor, trainingLabelTensor);
-					const trainingLoss = result.history.loss.pop();
-					console.log(`Training set loss: ${trainingLoss}`);
-					const validationLoss = result.history.val_loss.pop();
-					console.log(`Validation set loss: ${validationLoss}`);
-
-					const lostTensor = model.evaluate(testingFeatureTensor, testingLabelTensor);
-					const loss = await lostTensor.dataSync();
-					console.log(`Testing set loss: ${loss}`);
+					setDataLoaded(true);
+					setTrainingStatus('No model trained');
 				}
 			} catch (e) {
 				console.log(e);
@@ -138,7 +176,18 @@ function App() {
 		initiatePlot();
 	}, [points]);
 
-	return <div className="App"></div>;
+	return (
+		<div className="App">
+			<PredictionUI
+				toggleVisor={toggleVisor}
+				train={train}
+				dataLoaded={dataLoaded}
+				trainingStatus={trainingStatus}
+				test={test}
+				testingStatus={testingStatus}
+			/>
+		</div>
+	);
 }
 
 export default App;
