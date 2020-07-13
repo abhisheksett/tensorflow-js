@@ -2,8 +2,23 @@ import React from 'react';
 
 const STATUS_TRAINING = 'Training...';
 const STATUS_TRAINED = 'Trained';
+const STATUS_SAVED = 'saved';
+const STATUS_UNSAVED = 'unsaved';
 
-const PredictionUI = ({ toggleVisor, train, dataLoaded, trainingStatus, test, testingStatus }) => {
+const PredictionUI = ({
+	toggleVisor,
+	train,
+	dataLoaded,
+	trainingStatus,
+	test,
+	testingStatus,
+	save,
+	load,
+	inputChange,
+	inputValue,
+	predict,
+	predictionValue,
+}) => {
 	return (
 		<div>
 			<div className="section no-pad-bot" id="index-banner">
@@ -54,19 +69,19 @@ const PredictionUI = ({ toggleVisor, train, dataLoaded, trainingStatus, test, te
 									<p>
 										<label>Training status:</label>
 									</p>
-									<pre className="grey lighten-4" style={{ 'overflow-x': 'auto' }}>
+									<pre className="grey lighten-4" style={{ overflowX: 'auto' }}>
 										<em id="model-status">{trainingStatus}</em>
 									</pre>
 
 									<p>
 										<label>Testing status:</label>
 									</p>
-									<pre className="grey lighten-4" style={{ 'overflow-x': 'auto' }}>
+									<pre className="grey lighten-4" style={{ overflowX: 'auto' }}>
 										<em id="testing-status">{testingStatus}</em>
 									</pre>
 
 									<button
-										autocomplete="off"
+										autoComplete="off"
 										id="train-button"
 										className="waves-effect light-blue waves-light btn"
 										disabled={
@@ -79,7 +94,7 @@ const PredictionUI = ({ toggleVisor, train, dataLoaded, trainingStatus, test, te
 										Train New Model
 									</button>
 									<button
-										autocomplete="off"
+										autoComplete="off"
 										id="test-button"
 										className="waves-effect light-blue waves-light btn"
 										disabled={trainingStatus.indexOf(STATUS_TRAINED) !== 0}
@@ -92,20 +107,20 @@ const PredictionUI = ({ toggleVisor, train, dataLoaded, trainingStatus, test, te
 
 								<div>
 									<button
-										autocomplete="off"
+										autoComplete="off"
 										id="load-button"
 										className="waves-effect light-blue waves-light btn-small"
-										disabled
-										onClick="load()"
+										//disabled={trainingStatus.indexOf(STATUS_TRAINED) !== 0}
+										onClick={load}
 									>
 										Load Model
 									</button>
 									<button
-										autocomplete="off"
+										autoComplete="off"
 										id="save-button"
 										className="waves-effect light-blue waves-light btn-small"
-										disabled
-										onClick="save()"
+										disabled={trainingStatus.indexOf(`${STATUS_TRAINED} (${STATUS_SAVED})`) !== 0}
+										onClick={save}
 									>
 										Save Model
 									</button>
@@ -117,7 +132,7 @@ const PredictionUI = ({ toggleVisor, train, dataLoaded, trainingStatus, test, te
 						<div className="col s12 m6">
 							<div className="icon-block">
 								<h3 className="center light-blue-text">
-									<i className="material-icons" style={{ 'font-size': '2em' }}>
+									<i className="material-icons" style={{ fontSize: '2em' }}>
 										timeline
 									</i>
 								</h3>
@@ -125,19 +140,24 @@ const PredictionUI = ({ toggleVisor, train, dataLoaded, trainingStatus, test, te
 
 								<label>
 									Square feet of living space:{' '}
-									<input type="number" id="prediction-input" placeholder="2000" />
+									<input
+										type="number"
+										id="prediction-input"
+										placeholder="2000"
+										onChange={inputChange}
+										value={inputValue}
+									/>
 								</label>
 								<button
-									autocomplete="off"
+									autoComplete="off"
 									id="predict-button"
 									className="waves-effect light-blue waves-light btn"
-									disabled
-									onClick="predict()"
+									onClick={predict}
 								>
 									Predict house price
 								</button>
 								<p>
-									<strong id="prediction-output"></strong>
+									<strong id="prediction-output">{predictionValue}</strong>
 								</p>
 							</div>
 						</div>
