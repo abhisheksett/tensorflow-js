@@ -13,7 +13,7 @@
     "@tensorflow/tfjs-node": "^2.0.1",
     "@tensorflow/tfjs-vis": "^1.4.3",
     "cors": "^2.8.5",
-    "express": "^4.17.1"
+    "express": "^4.17.3"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.3",
